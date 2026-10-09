@@ -1,0 +1,10 @@
+data/raw/
+data/clean/
+data/reference/
+__pycache__/
+*.pyc
+.pytest_cache/
+private/
+config/*.json
+!config/example.json
+tests/private_*

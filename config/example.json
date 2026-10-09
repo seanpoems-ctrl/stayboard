@@ -1,0 +1,98 @@
+{
+  "host_name": "Demo Host",
+  "currency": "MYR",
+  "timezone": "Asia/Kuala_Lumpur",
+  "as_of": "2026-10-09",
+  "forward_days": 180,
+  "public_mode": false,
+  "sources": {
+    "agoda_transactions": "data/raw/agoda_transactions_all.csv",
+    "airbnb_reservations": "data/raw/airbnb_reservations_all.csv",
+    "airbnb_transactions": "data/raw/airbnb_transactions.csv",
+    "airbnb_calendar": "data/raw/airbnb_calendar_blocks.csv",
+    "bookingcom": "data/raw/bookingcom_2021_3br.csv"
+  },
+  "airbnb_estimated_fee_rate": 0.0324,
+  "direct_notes_start": "2023-01-01",
+  "units": [
+    {
+      "id": "u1",
+      "name": "3BR House Shah Alam",
+      "short": "3BR House",
+      "area": "Shah Alam",
+      "location": "Shah Alam",
+      "bedrooms": 3,
+      "agoda_id": "1000001",
+      "airbnb_id": "2000001",
+      "active": true,
+      "aliases": [
+        "Example Homestay"
+      ],
+      "ownership": "owned"
+    },
+    {
+      "id": "u2",
+      "name": "Condo A 101",
+      "short": "Condo A 101",
+      "area": "Condo A",
+      "location": "Shah Alam",
+      "bedrooms": 2,
+      "agoda_id": "1000002",
+      "airbnb_id": "2000002",
+      "active": true,
+      "ownership": "managed",
+      "owner_terms": {
+        "statement": "owner-a",
+        "cleaning_fee": 50,
+        "monthly": {
+          "Season parking": 88,
+          "Netflix": 29.63,
+          "Cleaning supplies": 50
+        }
+      }
+    },
+    {
+      "id": "u3",
+      "name": "Condo B 202",
+      "short": "Condo B 202",
+      "area": "Condo B",
+      "location": "Ampang",
+      "bedrooms": 1,
+      "agoda_id": "1000003",
+      "airbnb_id": "2000003",
+      "active": true,
+      "ownership": "managed",
+      "owner_terms": {
+        "statement": "owner-a",
+        "cleaning_fee": 50,
+        "monthly": {
+          "Season parking": 88,
+          "Netflix": 29.63,
+          "Cleaning supplies": 50
+        }
+      }
+    },
+    {
+      "id": "x1",
+      "name": "Old Unit",
+      "short": "Old Unit",
+      "agoda_id": "1000009",
+      "active": false
+    }
+  ],
+  "manager_name": "",
+  "owner_defaults": {
+    "commission": 0.2,
+    "vacancy_wipe": 10,
+    "vacancy_after_nights": 3
+  },
+  "statements": {
+    "owner-a": {
+      "owner": "Owner A",
+      "title": "",
+      "monthly": {
+        "Google Ad": 150
+      }
+    }
+  }
+}

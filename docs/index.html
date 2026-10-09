@@ -1,0 +1,727 @@
+<meta charset="utf-8">
+<title>Stayboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Short-term rental performance across Airbnb, Agoda and direct bookings.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column on phones, a 12-col grid from 900px; filters stick to the top; the forward calendar sits right under the headline numbers because it is the part a host acts on. */
+:root {
+  --bg: #f4f5f2;
+  --surface: #fcfcfb;
+  --ink: #141a1c;
+  --ink-2: #4b5357;
+  --muted: #7c8487;
+  --line: #e1e3dd;
+  --axis: #c3c6bf;
+  --accent: #1f3d4f;
+  --accent-ink: #ffffff;
+  --wash: rgba(31, 61, 79, 0.07);
+  --good: #006300;
+  --bad: #b3261e;
+  --ch-agoda: #2a78d6;
+  --ch-airbnb: #eb6834;
+  --ch-direct: #1baf7a;
+  --ch-bookingcom: #eda100;
+  --blk: #b9bdb6;
+  --seq-0: #eef1ef; --seq-1: #cde2fb; --seq-2: #9ec5f4; --seq-3: #6da7ec; --seq-4: #3987e5; --seq-5: #256abf; --seq-6: #184f95;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1112; --surface: #161a1b; --ink: #f2f4f3; --ink-2: #c1c7c8; --muted: #8c9497;
+    --line: #262c2e; --axis: #39403f; --accent: #9cc4dc; --accent-ink: #0e1112; --wash: rgba(156, 196, 220, 0.10);
+    --good: #3cbf3c; --bad: #f08a83;
+    --ch-agoda: #3987e5; --ch-airbnb: #d95926; --ch-direct: #199e70; --ch-bookingcom: #c98500; --blk: #4a5152;
+    --seq-0: #1f2526; --seq-1: #0d366b; --seq-2: #104281; --seq-3: #1c5cab; --seq-4: #2a78d6; --seq-5: #5598e7; --seq-6: #9ec5f4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1112; --surface: #161a1b; --ink: #f2f4f3; --ink-2: #c1c7c8; --muted: #8c9497;
+  --line: #262c2e; --axis: #39403f; --accent: #9cc4dc; --accent-ink: #0e1112; --wash: rgba(156, 196, 220, 0.10);
+  --good: #3cbf3c; --bad: #f08a83;
+  --ch-agoda: #3987e5; --ch-airbnb: #d95926; --ch-direct: #199e70; --ch-bookingcom: #c98500; --blk: #4a5152;
+  --seq-0: #1f2526; --seq-1: #0d366b; --seq-2: #104281; --seq-3: #1c5cab; --seq-4: #2a78d6; --seq-5: #5598e7; --seq-6: #9ec5f4;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 5vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 19px; font-weight: 600; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.sub { color: var(--ink-2); font-size: 14px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; margin-bottom: 14px; }
+header.top .meta { color: var(--muted); font-size: 13px; text-align: right; }
+
+/* filter bar */
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; margin-bottom: 8px;
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; flex-wrap: wrap; }
+.seg button, .chip { font: 500 13px var(--font-body); border: 0; background: transparent; color: var(--ink-2); padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.chip { border: 1px solid var(--line); background: var(--surface); display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="false"] { opacity: 0.5; }
+.chip[aria-pressed="false"] .sw { background: transparent !important; outline: 1.5px solid var(--muted); outline-offset: -1.5px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+select { font: 500 13px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 30px 7px 12px; }
+button:focus-visible, select:focus-visible, th:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* grid */
+.grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+@media (min-width: 900px) { .grid { grid-template-columns: repeat(12, 1fr); } .s12 { grid-column: span 12; } .s8 { grid-column: span 8; } .s7 { grid-column: span 7; } .s6 { grid-column: span 6; } .s5 { grid-column: span 5; } .s4 { grid-column: span 4; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.card-h { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 10px; }
+.card-h .sub { margin-top: 2px; }
+.tbtn { font: 500 12px var(--font-body); color: var(--ink-2); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; cursor: pointer; white-space: nowrap; }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-top: 14px; }
+@media (min-width: 700px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); padding: 14px 16px; min-width: 0; }
+.kpi .lbl { font-size: 13px; color: var(--ink-2); }
+.kpi .val { font: 600 clamp(22px, 4.6vw, 30px)/1.15 var(--font-body); margin-top: 4px; letter-spacing: -0.01em; }
+.kpi .val small { font-size: 0.55em; font-weight: 500; color: var(--ink-2); margin-left: 2px; }
+.kpi .d { font-size: 12.5px; margin-top: 3px; color: var(--muted); }
+.up { color: var(--good); } .down { color: var(--bad); }
+.kpi.hero .val { font-size: clamp(30px, 7vw, 44px); }
+@media (max-width: 699px) { .kpi.hero, .kpi:last-child { grid-column: span 2; } header.top .meta { text-align: left; } }
+
+/* charts */
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font: 11px var(--font-body); font-variant-numeric: tabular-nums; }
+.chart .lbl-ink { fill: var(--ink-2); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lk { width: 14px; height: 2px; display: inline-block; border-radius: 2px; }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.14); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; min-width: 140px; max-width: 260px; }
+.tip .t { color: var(--muted); font-size: 11.5px; margin-bottom: 4px; }
+.tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tip .r b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tip .r span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.hit { fill: transparent; cursor: default; }
+.hit:hover + .mk, .mk:hover { opacity: 0.8; }
+
+/* tables */
+.tw { overflow-x: auto; margin-inline: -4px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th { text-align: right; font-weight: 500; color: var(--muted); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; cursor: pointer; user-select: none; }
+th:first-child, td:first-child { text-align: left; }
+td { text-align: right; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover { background: var(--wash); }
+tr.sel td { background: var(--wash); }
+th[aria-sort="ascending"]::after { content: " ↑"; } th[aria-sort="descending"]::after { content: " ↓"; }
+.tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+.mix { display: inline-flex; width: 90px; height: 8px; gap: 2px; vertical-align: middle; }
+.mix i { display: block; height: 100%; border-radius: 2px; }
+.muted { color: var(--muted); }
+
+/* forward calendar */
+.cal { overflow-x: auto; }
+.cal-grid { display: grid; grid-template-columns: fit-content(150px) 1fr; gap: 5px 8px; align-items: center; min-width: 560px; }
+.cal-name { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-row { display: grid; gap: 1px; height: 18px; }
+.cal-row i { display: block; border-radius: 2px; background: var(--seq-0); min-width: 0; }
+.cal-row i.O { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.cal-row i.gap { background: transparent; box-shadow: inset 0 0 0 1.5px var(--bad); }
+.cal-row i.M, .cal-row i.P, .cal-row i.U { background: repeating-linear-gradient(135deg, var(--blk) 0 2px, transparent 2px 5px); }
+.cal-axis { display: grid; gap: 1px; font-size: 10.5px; color: var(--muted); height: 14px; }
+.cal-axis span { white-space: nowrap; overflow: visible; }
+.gaplist { display: grid; gap: 0; margin-top: 12px; }
+.gaplist .g { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.pill { font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 1px 8px; border: 1px solid currentColor; }
+.pill.orphan { color: var(--bad); }
+.pill.short { color: var(--ink-2); }
+
+/* heatmap */
+.heat { display: grid; gap: 2px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.heat .c { height: 26px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; }
+.heat .h { color: var(--muted); text-align: center; }
+.heat .y { color: var(--ink-2); padding-right: 6px; display: flex; align-items: center; }
+.scale { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.scale i { width: 22px; height: 10px; border-radius: 2px; display: inline-block; }
+
+details.def { margin-top: 18px; color: var(--ink-2); font-size: 13.5px; }
+details.def summary { cursor: pointer; font-weight: 500; color: var(--ink); }
+details.def dl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 16px; max-width: 900px; }
+@media (min-width: 700px) { details.def dl { grid-template-columns: 200px minmax(0, 1fr); } }
+details.def dt { font-weight: 600; color: var(--ink); }
+details.def dd { margin: 0 0 6px; }
+footer { color: var(--muted); font-size: 12.5px; margin-top: 18px; }
+.empty { color: var(--muted); font-size: 13.5px; padding: 16px 0; }
+@media (prefers-reduced-motion: no-preference) { .chart svg .mk { transition: opacity .12s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Short-term rental performance</div>
+      <h1 id="title">Portfolio overview</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <div class="meta" id="asof"></div>
+  </header>
+
+  <div class="filters" role="region" aria-label="Filters">
+    <div class="seg" id="f-period" role="group" aria-label="Period">
+      <button data-v="12m">Last 12 months</button><button data-v="24m">24 months</button><button data-v="ytd">This year</button><button data-v="all">All time</button>
+    </div>
+    <label class="sr" for="f-unit" style="position:absolute;left:-9999px">Unit</label>
+    <select id="f-unit" aria-label="Unit"></select>
+    <div class="chips" id="f-ch" role="group" aria-label="Channels"></div>
+  </div>
+
+  <section class="kpis" id="kpis" aria-label="Headline numbers"></section>
+
+  <div class="grid">
+    <section class="card s12" id="ahead">
+      <div class="card-h">
+        <div><h2>Next 120 days</h2><div class="sub">What's on the books, and the unbooked gaps between stays that are worth filling.</div></div>
+      </div>
+      <div class="legend" id="cal-legend"></div>
+      <div class="cal"><div id="cal"></div></div>
+      <div class="gaplist" id="gaplist"></div>
+    </section>
+
+    <section class="card s8">
+      <div class="card-h"><div><h2>Net revenue by month</h2><div class="sub">After platform fees, by stay month</div></div><button class="tbtn" data-table="rev">Table</button></div>
+      <div class="legend" id="rev-legend"></div>
+      <div class="chart" id="rev"></div>
+    </section>
+    <section class="card s4">
+      <div class="card-h"><div><h2>Channel mix</h2><div class="sub">Share of booked nights and what each night earned</div></div></div>
+      <div id="chmix"></div>
+    </section>
+
+    <section class="card s12">
+      <div class="card-h"><div><h2>Units</h2><div class="sub">Tap a unit to filter the whole page</div></div></div>
+      <div class="tw"><table id="units"></table></div>
+    </section>
+
+    <section class="card s6">
+      <div class="card-h"><div><h2>Occupancy by month</h2><div class="sub">Booked nights ÷ nights open for sale</div></div><button class="tbtn" data-table="occ">Table</button></div>
+      <div class="chart" id="occ"></div>
+    </section>
+    <section class="card s6">
+      <div class="card-h"><div><h2>Average nightly rate by month</h2><div class="sub">Room rate, excluding cleaning fee</div></div><button class="tbtn" data-table="adr">Table</button></div>
+      <div class="chart" id="adr"></div>
+    </section>
+
+    <section class="card s7">
+      <div class="card-h"><div><h2>Seasonality</h2><div class="sub" id="seas-sub">Occupancy by month, every year on record</div></div><button class="tbtn" data-table="seas">Table</button></div>
+      <div id="seas"></div>
+    </section>
+    <section class="card s5">
+      <div class="card-h"><div><h2>Booking lead time</h2><div class="sub">Days between booking and check-in</div></div><button class="tbtn" data-table="lead">Table</button></div>
+      <div class="legend" id="lead-legend"></div>
+      <div class="chart" id="lead"></div>
+    </section>
+
+    <section class="card s6">
+      <div class="card-h"><div><h2>Platform fees</h2><div class="sub">Fees as a share of what the guest paid, by quarter</div></div><button class="tbtn" data-table="fees">Table</button></div>
+      <div class="legend" id="fees-legend"></div>
+      <div class="chart" id="fees"></div>
+    </section>
+    <section class="card s6">
+      <div class="card-h"><div><h2>Cancellations</h2><div class="sub">Share of bookings cancelled, by check-in month</div></div><button class="tbtn" data-table="canc">Table</button></div>
+      <div class="legend" id="canc-legend"></div>
+      <div class="chart" id="canc"></div>
+    </section>
+  </div>
+
+  <details class="def">
+    <summary>How the numbers are worked out</summary>
+    <dl>
+      <dt>Nights open for sale</dt><dd>Calendar nights since the unit's first stay, minus nights blocked for maintenance, personal use, or blocked with no reason recorded. Those blocked nights are left out of occupancy and are never counted as gaps.</dd>
+      <dt>Occupancy</dt><dd>Booked nights ÷ nights open for sale.</dd>
+      <dt>Average nightly rate</dt><dd>Room revenue ÷ booked nights, excluding the cleaning fee. Stays without a recorded price (some direct stays) are left out.</dd>
+      <dt>Revenue per available night</dt><dd>Room revenue ÷ nights open for sale. It moves with both price and occupancy.</dd>
+      <dt>Net revenue</dt><dd>What the platforms pay out after their commission or service fee, plus direct-stay income and cancellation fees kept. "After cleaning" also removes the cleaning fee, which is passed on to cleaners.</dd>
+      <dt>Gap nights</dt><dd>Unbooked nights with a stay on both sides (up to 14 nights). One- and two-night gaps are flagged, because they are the hardest to sell and the easiest to fix with a minimum-stay or price change.</dd>
+      <dt>Lead time</dt><dd>Days from booking to check-in, for Airbnb, Agoda and Booking.com bookings.</dd>
+      <dt>Direct stays</dt><dd>Taken from the host's calendar notes from 2023 onward. Earlier direct stays can't be identified and appear as blocked nights.</dd>
+      <dt>Estimated figures</dt><dd>Airbnb's fee split before Oct 2023 and Agoda's cleaning fee are worked out from the payout pattern. Direct-stay prices come from the host's own notes.</dd>
+    </dl>
+  </details>
+  <footer id="foot"></footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const CH = {
+  airbnb: { name: "Airbnb", v: "--ch-airbnb" },
+  agoda: { name: "Agoda", v: "--ch-agoda" },
+  direct: { name: "Direct", v: "--ch-direct" },
+  bookingcom: { name: "Booking.com", v: "--ch-bookingcom" },
+};
+const CH_ORDER = ["agoda", "airbnb", "direct", "bookingcom"];
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const mLabel = (m) => MON[+m.slice(5) - 1] + " " + m.slice(2, 4);
+const addM = (m, k) => { let y = +m.slice(0, 4), mo = +m.slice(5) - 1 + k; y += Math.floor(mo / 12); mo = ((mo % 12) + 12) % 12; return y + "-" + String(mo + 1).padStart(2, "0"); };
+const mRange = (a, b) => { const out = []; for (let m = a; m <= b; m = addM(m, 1)) out.push(m); return out; };
+const fmtRM = (v, dp) => { if (v == null || !isFinite(v)) return "–"; const a = Math.abs(v);
+  if (dp === undefined) { if (a >= 1e6) return "RM " + (v / 1e6).toFixed(2) + "M"; if (a >= 1e4) return "RM " + (v / 1e3).toFixed(1) + "K"; }
+  return "RM " + Math.round(v).toLocaleString("en-MY"); };
+const fmtPct = (v, dp = 1) => (v == null || !isFinite(v)) ? "–" : (v * 100).toFixed(dp) + "%";
+const fmtN = (v) => (v == null || !isFinite(v)) ? "–" : Math.round(v).toLocaleString("en-MY");
+const median = (arr) => { if (!arr.length) return null; const s = arr.slice().sort((a, b) => a - b); const h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+
+let D, S, unitName = {};
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+fetch("data.json").then((r) => r.json()).then((d) => { D = d; init(); }).catch(() => {
+  document.querySelector(".wrap").insertAdjacentHTML("beforeend", '<p class="empty">Could not load data.json. Run the build script, then serve the site folder.</p>');
+});
+
+function init() {
+  const asOf = D.meta.as_of;
+  D.lastFull = addM(asOf.slice(0, 7), -1);
+  D.first = D.supply.reduce((m, r) => (r[1] < m ? r[1] : m), "9999");
+  D.meta.units.forEach((u) => { unitName[u.id] = u.name; ownOf[u.id] = u.ownership || ""; });
+  const chs = CH_ORDER.filter((c) => D.meta.channels.includes(c));
+  S = { period: store.get("sb.period") || "12m", unit: "all", ch: new Set(chs), tables: {} };
+
+  $("#subtitle").textContent = `${D.meta.units.length} units · ${chs.map((c) => CH[c].name).join(", ")}`;
+  $("#asof").innerHTML = `Data to ${esc(fmtDate(asOf))}<br>Built ${esc(D.meta.built)}`;
+  $("#foot").textContent = `Figures in ${D.meta.currency}. Guest names and contact details are not stored. Built from platform exports and calendar notes.`;
+
+  const sel = $("#f-unit");
+  const grp = (k, lbl) => { const us = D.meta.units.filter((u) => (u.ownership || "") === k); return us.length ? `<optgroup label="${lbl}">${us.map((u) => `<option value="${esc(u.id)}">${esc(u.name)}</option>`).join("")}</optgroup>` : ""; };
+  const hasOwn = D.meta.units.some((u) => u.ownership);
+  sel.innerHTML = `<option value="all">All units</option>` + (hasOwn ? `<option value="g:owned">Owned units</option><option value="g:managed">Managed units</option>` + grp("owned", "Owned") + grp("managed", "Managed") : D.meta.units.map((u) => `<option value="${esc(u.id)}">${esc(u.name)}</option>`).join(""));
+  sel.addEventListener("change", () => { S.unit = sel.value; render(); });
+  document.querySelectorAll("#f-period button").forEach((b) => b.addEventListener("click", () => { S.period = b.dataset.v; store.set("sb.period", S.period); render(); }));
+  $("#f-ch").innerHTML = chs.map((c) => `<button class="chip" data-c="${c}" aria-pressed="true"><i class="sw" style="background:var(${CH[c].v})"></i>${CH[c].name}</button>`).join("");
+  document.querySelectorAll("#f-ch .chip").forEach((b) => b.addEventListener("click", () => {
+    const c = b.dataset.c; if (S.ch.has(c) && S.ch.size > 1) S.ch.delete(c); else S.ch.add(c); render();
+  }));
+  document.querySelectorAll(".tbtn").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.table; S.tables[k] = !S.tables[k]; render(); }));
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", render);
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+  render();
+}
+
+function fmtDate(s) { const d = new Date(s + "T00:00:00"); return d.getDate() + " " + MON[d.getMonth()] + " " + d.getFullYear(); }
+
+function periodRange(p) {
+  const e = D.lastFull;
+  if (p === "12m") return [addM(e, -11), e];
+  if (p === "24m") return [addM(e, -23), e];
+  if (p === "ytd") return [e.slice(0, 4) + "-01", e];
+  return [D.first, e];
+}
+const ownOf = {}; const unitOk = (u) => S.unit === "all" || S.unit === u || (S.unit.startsWith("g:") && ownOf[u] === S.unit.slice(2));
+const chOk = (c) => S.ch.has(c);
+
+/* ---- aggregation ---- */
+function agg(a, b) {
+  const o = { avail: 0, cal: 0, n: 0, nk: 0, g: 0, nt: 0, rm: 0, adj: 0, cxl: 0, byCh: {}, byM: {}, byU: {} };
+  const bump = (obj, k) => (obj[k] = obj[k] || { n: 0, nk: 0, g: 0, nt: 0, rm: 0, avail: 0, ch: {} });
+  for (const [u, m, cal, mt, ps, uk] of D.supply) {
+    if (m < a || m > b || !unitOk(u)) continue;
+    const av = cal - mt - ps - uk; o.avail += av; o.cal += cal;
+    bump(o.byM, m).avail += av; bump(o.byU, u).avail += av;
+  }
+  for (const [u, m, c, n, nk, g, nt, rm] of D.stays) {
+    if (m < a || m > b || !unitOk(u) || !chOk(c)) continue;
+    o.n += n; o.nk += nk; o.g += g || 0; o.nt += nt || 0; o.rm += rm || 0;
+    for (const t of [bump(o.byCh, c), bump(o.byM, m), bump(o.byU, u)]) { t.n += n; t.nk += nk; t.g += g || 0; t.nt += nt || 0; t.rm += rm || 0; t.ch[c] = (t.ch[c] || 0) + n; }
+  }
+  for (const [u, c, m, cx, , , net] of D.events) { if (cx && net && m >= a && m <= b && unitOk(u) && chOk(c)) o.cxl += net; }
+  for (const [u, m, c, amt] of D.adjust) { if (m >= a && m <= b && unitOk(u) && chOk(c)) o.adj += amt; }
+  o.net = o.nt + o.cxl + o.adj;
+  o.clean = o.g - o.rm;
+  o.fee = o.g - o.nt;
+  o.occ = o.avail ? o.n / o.avail : null;
+  o.adr = o.nk ? o.rm / o.nk : null;
+  o.revpan = o.avail ? o.rm / o.avail : null;
+  // bookings, cancellations, lead
+  const leads = {}; let bk = 0, cx = 0, lost = 0;
+  for (const [u, c, m, isC, n, lead] of D.events) {
+    if (m < a || m > b || !unitOk(u) || !chOk(c)) continue;
+    bk++; if (isC) { cx++; lost += n; } else if (lead != null) (leads[c] = leads[c] || []).push(lead);
+  }
+  o.bookings = bk; o.cancels = cx; o.lostNights = lost; o.cxRate = bk ? cx / bk : null;
+  o.leads = leads; o.leadMed = median(Object.values(leads).flat());
+  // gaps (past)
+  let gn = 0, orphan = 0; const gU = {};
+  for (const [u, s, len, up] of D.gaps) { const m = s.slice(0, 7); if (up || m < a || m > b || !unitOk(u)) continue; gn += len; if (len <= 2) orphan += len; gU[u] = (gU[u] || 0) + len; }
+  o.gapN = gn; o.orphanN = orphan; o.gapU = gU;
+  return o;
+}
+
+/* ---- render ---- */
+function render() {
+  if (!D) return;
+  document.querySelectorAll("#f-period button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === S.period)));
+  document.querySelectorAll("#f-ch .chip").forEach((b) => b.setAttribute("aria-pressed", String(S.ch.has(b.dataset.c))));
+  $("#f-unit").value = S.unit;
+  $("#title").textContent = S.unit === "all" ? "Portfolio overview" : S.unit === "g:owned" ? "Owned units" : S.unit === "g:managed" ? "Managed units" : unitName[S.unit];
+  const [a, b] = periodRange(S.period);
+  const cur = agg(a, b);
+  const len = mRange(a, b).length;
+  const prev = S.period === "all" ? null : agg(addM(a, -len), addM(a, -1));
+  renderKpis(cur, prev, a, b);
+  renderCalendar();
+  renderRevenue(a, b, cur);
+  renderMix(cur);
+  renderUnits(a, b);
+  renderOcc(a, b, cur);
+  renderAdr(a, b, cur);
+  renderSeasonality();
+  renderLead(cur);
+  renderFees();
+  renderCancels(a, b);
+}
+
+function delta(cur, prev, key, kind) {
+  if (!prev || prev[key] == null || cur[key] == null || !prev[key]) return `<div class="d">&nbsp;</div>`;
+  let txt, up;
+  if (kind === "pp") { const d = (cur[key] - prev[key]) * 100; up = d >= 0; txt = (d >= 0 ? "+" : "−") + Math.abs(d).toFixed(1) + " pts"; }
+  else { const d = cur[key] / prev[key] - 1; up = d >= 0; txt = (d >= 0 ? "+" : "−") + Math.abs(d * 100).toFixed(1) + "%"; }
+  const goodWhenUp = kind !== "inv";
+  const cls = (up === goodWhenUp) ? "up" : "down";
+  return `<div class="d"><span class="${cls}">${up ? "▲" : "▼"} ${txt}</span> vs previous ${S.period === "ytd" ? "period" : "period"}</div>`;
+}
+
+function renderKpis(c, p, a, b) {
+  const per = `${mLabel(a)} – ${mLabel(b)}`;
+  const tiles = [
+    { lbl: "Net revenue", val: fmtRM(c.net), d: delta(c, p, "net"), hero: true, extra: `After cleaning: ${fmtRM(c.net - c.clean)}` },
+    { lbl: "Occupancy", val: fmtPct(c.occ), d: delta(c, p, "occ", "pp"), extra: `${fmtN(c.n)} of ${fmtN(c.avail)} nights` },
+    { lbl: "Average nightly rate", val: fmtRM(c.adr, 0), d: delta(c, p, "adr"), extra: "Excludes cleaning fee" },
+    { lbl: "Revenue per available night", val: fmtRM(c.revpan, 0), d: delta(c, p, "revpan"), extra: "Room revenue ÷ open nights" },
+    { lbl: "Platform fees paid", val: fmtRM(c.fee), d: delta(c, p, "fee", "inv"), extra: c.g ? `${fmtPct(c.fee / c.g)} of what guests paid` : "" },
+    { lbl: "Cancellations", val: fmtPct(c.cxRate), d: delta(c, p, "cxRate", "pp-inv"), extra: `${fmtN(c.cancels)} of ${fmtN(c.bookings)} bookings` },
+    { lbl: "Median lead time", val: c.leadMed == null ? "–" : `${Math.round(c.leadMed)}<small>days</small>`, d: "", extra: "Booking to check-in" },
+    { lbl: "Unbooked gap nights", val: fmtN(c.gapN), d: "", extra: `${fmtN(c.orphanN)} were 1–2 night gaps` },
+  ];
+  // cancellations: up is bad
+  tiles[5].d = (() => { if (!p || p.cxRate == null || c.cxRate == null) return `<div class="d">&nbsp;</div>`; const d = (c.cxRate - p.cxRate) * 100; const up = d >= 0; return `<div class="d"><span class="${up ? "down" : "up"}">${up ? "▲" : "▼"} ${Math.abs(d).toFixed(1)} pts</span> vs previous period</div>`; })();
+  $("#kpis").innerHTML = tiles.map((t) => `<div class="kpi${t.hero ? " hero" : ""}"><div class="lbl">${t.lbl}</div><div class="val">${t.val}</div>${t.d || ""}<div class="d">${esc(t.extra)}</div></div>`).join("");
+  $("#kpis").setAttribute("aria-label", `Headline numbers for ${per}`);
+  $("#kpis").insertAdjacentHTML("afterbegin", "");
+  document.querySelector("#kpis .kpi .lbl").textContent = `Net revenue · ${per}`;
+}
+
+/* ---- forward calendar ---- */
+function renderCalendar() {
+  const units = D.meta.units.filter((u) => unitOk(u.id) && D.strip[u.id]);
+  const days = units.length ? D.strip[units[0].id].length : 0;
+  const start = new Date(D.meta.as_of + "T00:00:00");
+  const gapSet = {};
+  for (const [u, s, len, up] of D.gaps) if (up) { const d0 = Math.round((new Date(s + "T00:00:00") - start) / 864e5); for (let i = 0; i < len; i++) gapSet[u + ":" + (d0 + i)] = len; }
+  const cols = `repeat(${days}, minmax(0, 1fr))`;
+  let axis = "";
+  for (let i = 0; i < days; i++) { const d = new Date(start.getTime() + i * 864e5); axis += `<span>${d.getDate() === 1 || i === 0 ? MON[d.getMonth()] : ""}</span>`; }
+  const codeMap = { A: "airbnb", G: "agoda", D: "direct", B: "bookingcom" };
+  let html = `<div class="cal-grid"><div></div><div class="cal-axis" style="grid-template-columns:${cols}">${axis}</div>`;
+  for (const u of units) {
+    const s = D.strip[u.id];
+    let cells = "";
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i]; const d = new Date(start.getTime() + i * 864e5);
+      const dstr = d.getDate() + " " + MON[d.getMonth()];
+      if (codeMap[ch]) cells += `<i style="background:var(${CH[codeMap[ch]].v})" data-tip="${esc(u.name)}|${dstr}|${CH[codeMap[ch]].name} stay"></i>`;
+      else if (ch === "O" && gapSet[u.id + ":" + i]) cells += `<i class="gap" data-tip="${esc(u.name)}|${dstr}|Gap night (${gapSet[u.id + ":" + i]}-night gap)"></i>`;
+      else if (ch === "O") cells += `<i class="O" data-tip="${esc(u.name)}|${dstr}|Open"></i>`;
+      else cells += `<i class="${ch}" data-tip="${esc(u.name)}|${dstr}|Blocked (${{ M: "maintenance", P: "personal", U: "no reason recorded" }[ch]})"></i>`;
+    }
+    html += `<div class="cal-name" title="${esc(u.name)}">${esc(u.name)}</div><div class="cal-row" style="grid-template-columns:${cols}">${cells}</div>`;
+  }
+  html += `</div>`;
+  $("#cal").innerHTML = units.length ? html : `<div class="empty">No units selected.</div>`;
+  $("#cal").querySelectorAll("i[data-tip]").forEach((el) => attachTip(el, () => { const [n, d, t] = el.dataset.tip.split("|"); return { title: `${n} · ${d}`, rows: [[null, t, ""]] }; }));
+  const chs = CH_ORDER.filter((c) => D.meta.channels.includes(c) && c !== "bookingcom");
+  $("#cal-legend").innerHTML = chs.map((c) => `<span><i class="sw" style="background:var(${CH[c].v})"></i>${CH[c].name}</span>`).join("") +
+    `<span><i class="sw" style="box-shadow:inset 0 0 0 1px var(--line)"></i>Open</span><span><i class="sw" style="box-shadow:inset 0 0 0 1.5px var(--bad)"></i>Gap between stays</span><span><i class="sw" style="background:repeating-linear-gradient(135deg,var(--blk) 0 2px,transparent 2px 5px)"></i>Blocked</span>`;
+
+  // gap list: upcoming bounded gaps within 60 days, shortest first priority
+  const horizon = new Date(start.getTime() + 60 * 864e5);
+  const up = D.gaps.filter(([u, s, , isUp]) => isUp && unitOk(u) && new Date(s + "T00:00:00") < horizon)
+    .sort((x, y) => x[1].localeCompare(y[1]));
+  const open30 = {}; for (const u of units) open30[u.id] = [...D.strip[u.id].slice(0, 30)].filter((x) => x === "O").length;
+  const gl = $("#gaplist");
+  if (!up.length) { gl.innerHTML = `<div class="g"><div class="muted">No gaps between stays in the next 60 days.</div><div></div></div>`; return; }
+  const totalGap = up.reduce((s, g) => s + g[2], 0);
+  gl.innerHTML = `<div class="g" style="border-top:0"><div><b>${up.length} gaps to fill in the next 60 days</b> · ${totalGap} nights</div><div class="muted">${units.length > 1 ? "" : `${open30[units[0].id]} open nights in the next 30 days`}</div></div>` +
+    up.slice(0, 12).map(([u, s, len, , wk]) => {
+      const d0 = new Date(s + "T00:00:00"), d1 = new Date(d0.getTime() + len * 864e5);
+      const span = `${d0.getDate()} ${MON[d0.getMonth()]} – ${d1.getDate()} ${MON[d1.getMonth()]}`;
+      const pill = len <= 2 ? `<span class="pill orphan">${len}-night gap</span>` : `<span class="pill short">${len} nights</span>`;
+      return `<div class="g"><div>${units.length > 1 ? `<b>${esc(unitName[u])}</b> · ` : ""}${span}${wk ? ` <span class="muted">· ${wk} Fri/Sat</span>` : ""}</div><div>${pill}</div></div>`;
+    }).join("") + (up.length > 12 ? `<div class="g"><div class="muted">${up.length - 12} more later in the window</div><div></div></div>` : "");
+}
+
+/* ---- tooltip ---- */
+const tip = $("#tip");
+function attachTip(el, fn) {
+  const show = (ev) => {
+    const t = fn(); tip.replaceChildren();
+    const h = document.createElement("div"); h.className = "t"; h.textContent = t.title; tip.appendChild(h);
+    for (const [color, label, val] of t.rows) {
+      const r = document.createElement("div"); r.className = "r";
+      const l = document.createElement("span");
+      if (color) { const k = document.createElement("i"); k.className = "lk"; k.style.background = color; l.appendChild(k); }
+      l.appendChild(document.createTextNode(label));
+      const v = document.createElement("b"); v.textContent = val;
+      r.append(l, v); tip.appendChild(r);
+    }
+    tip.hidden = false; place(ev);
+  };
+  const place = (ev) => {
+    let x, y;
+    if (ev && ev.clientX != null) { x = ev.clientX; y = ev.clientY; } else { const r = el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top; }
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(Math.max(8, x + 12), innerWidth - w - 8) + "px";
+    tip.style.top = (y - h - 12 < 8 ? y + 16 : y - h - 12) + "px";
+  };
+  el.addEventListener("pointerenter", show); el.addEventListener("pointermove", place);
+  el.addEventListener("pointerleave", () => (tip.hidden = true));
+  if (el.tabIndex >= 0) { el.addEventListener("focus", () => show()); el.addEventListener("blur", () => (tip.hidden = true)); }
+}
+
+/* ---- generic SVG helpers ---- */
+function niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+function frame(el) { const w = Math.max(280, el.clientWidth || 600); return { w, h: w < 520 ? 220 : 260, l: 48, r: 12, t: 10, b: 26 }; }
+function yAxis(F, max, fmt, ticks = 4) {
+  let s = ""; for (let i = 0; i <= ticks; i++) { const v = (max / ticks) * i; const y = F.t + (F.h - F.t - F.b) * (1 - v / max);
+    s += `<line x1="${F.l}" x2="${F.w - F.r}" y1="${y}" y2="${y}" stroke="${i ? css("--line") : css("--axis")}" stroke-width="1"/>` + `<text x="${F.l - 6}" y="${y + 3.5}" text-anchor="end">${esc(fmt(v))}</text>`; }
+  return s;
+}
+function xLabels(F, months, x) {
+  const every = Math.ceil(months.length / Math.max(3, Math.floor((F.w - F.l) / 54)));
+  return months.map((m, i) => (i % every === 0 ? `<text x="${x(i)}" y="${F.h - 8}" text-anchor="middle">${esc(mLabel(m))}</text>` : "")).join("");
+}
+function tableHtml(head, rows) {
+  return `<div class="tw"><table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function legend(id, keys, kind = "rect") {
+  $("#" + id).innerHTML = keys.length < 2 ? "" : keys.map((k) => `<span>${kind === "line" ? `<i class="lk" style="background:var(${CH[k].v})"></i>` : `<i class="sw" style="background:var(${CH[k].v})"></i>`}${CH[k].name}</span>`).join("");
+}
+
+/* ---- revenue stacked columns ---- */
+function renderRevenue(a, b, cur) {
+  const el = $("#rev"); const months = mRange(a, b);
+  const chs = CH_ORDER.filter((c) => S.ch.has(c) && months.some((m) => cur.byM[m] && cur.byM[m].ch[c]));
+  legend("rev-legend", chs);
+  const val = (m, c) => { let s = 0; for (const [u, mm, cc, , , , nt] of D.stays) if (mm === m && cc === c && unitOk(u)) s += nt || 0; return s; };
+  const grid = months.map((m) => chs.map((c) => val(m, c)));
+  if (S.tables.rev) { el.innerHTML = tableHtml(["Month", ...chs.map((c) => CH[c].name), "Total"], months.map((m, i) => [mLabel(m), ...grid[i].map((v) => fmtRM(v, 0)), fmtRM(grid[i].reduce((x, y) => x + y, 0), 0)])); return; }
+  const F = frame(el); const max = niceMax(Math.max(1, ...grid.map((r) => r.reduce((x, y) => x + y, 0))));
+  const band = (F.w - F.l - F.r) / months.length; const bw = Math.min(24, band * 0.7);
+  const x = (i) => F.l + band * (i + 0.5); const y = (v) => F.t + (F.h - F.t - F.b) * (1 - v / max);
+  let s = yAxis(F, max, (v) => v >= 1000 ? (v / 1000) + "K" : String(v));
+  months.forEach((m, i) => {
+    let acc = 0; const n = chs.length;
+    chs.forEach((c, j) => {
+      const v = grid[i][j]; if (v <= 0) return;
+      const y0 = y(acc), y1 = y(acc + v); acc += v;
+      const top = j === n - 1 || grid[i].slice(j + 1).every((z) => z <= 0);
+      const hgt = Math.max(0, y0 - y1 - (acc > v ? 2 : 0));
+      const r = top ? Math.min(4, hgt / 2, bw / 2) : 0;
+      const xx = x(i) - bw / 2, yy = y1;
+      s += r ? `<path class="mk" fill="${css(CH[c].v)}" d="M${xx},${yy + hgt}V${yy + r}Q${xx},${yy} ${xx + r},${yy}H${xx + bw - r}Q${xx + bw},${yy} ${xx + bw},${yy + r}V${yy + hgt}Z"/>`
+             : `<rect class="mk" fill="${css(CH[c].v)}" x="${xx}" y="${yy}" width="${bw}" height="${hgt}"/>`;
+    });
+    s += `<rect class="hit" data-i="${i}" x="${F.l + band * i}" y="${F.t}" width="${band}" height="${F.h - F.t - F.b}"/>`;
+  });
+  s += xLabels(F, months, x);
+  el.innerHTML = `<svg viewBox="0 0 ${F.w} ${F.h}" role="img" aria-label="Net revenue by month, stacked by channel">${s}</svg>`;
+  el.querySelectorAll(".hit").forEach((h) => attachTip(h, () => { const i = +h.dataset.i; const tot = grid[i].reduce((p, q) => p + q, 0);
+    return { title: mLabel(months[i]), rows: [...chs.map((c, j) => [css(CH[c].v), CH[c].name, fmtRM(grid[i][j], 0)]).reverse(), [null, "Total", fmtRM(tot, 0)]] }; }));
+}
+
+/* ---- channel mix ---- */
+function renderMix(cur) {
+  const chs = CH_ORDER.filter((c) => cur.byCh[c] && cur.byCh[c].n);
+  if (!chs.length) { $("#chmix").innerHTML = `<div class="empty">No stays in this period.</div>`; return; }
+  const tot = chs.reduce((s, c) => s + cur.byCh[c].n, 0);
+  const bar = `<div style="display:flex;gap:2px;height:14px;margin:6px 0 14px">${chs.map((c) => `<i style="flex:${cur.byCh[c].n};background:var(${CH[c].v});border-radius:3px" title="${CH[c].name}"></i>`).join("")}</div>`;
+  const leadsBy = {}; for (const c of chs) leadsBy[c] = median(cur.leads[c] || []);
+  const rows = chs.map((c) => { const x = cur.byCh[c]; return `<tr><td><i class="sw" style="background:var(${CH[c].v})"></i> ${CH[c].name}</td><td>${fmtPct(x.n / tot, 0)}</td><td>${x.nk ? fmtRM(x.rm / x.nk, 0) : "–"}</td><td>${x.nk ? fmtRM((x.nt - (x.g - x.rm)) / x.nk, 0) : "–"}</td><td>${x.g ? fmtPct((x.g - x.nt) / x.g, 1) : "–"}</td></tr>`; }).join("");
+  $("#chmix").innerHTML = bar + `<div class="tw"><table><thead><tr><th>Channel</th><th>Nights</th><th>Rate</th><th>Kept / night</th><th>Fee</th></tr></thead><tbody>${rows}</tbody></table></div>` +
+    `<p class="sub" style="margin:10px 0 0;font-size:12.5px">Rate is the room rate per night. Kept / night is what you keep after platform fees and cleaning.${chs.includes("direct") ? " Direct includes only stays with a price in the note." : ""}</p>`;
+}
+
+/* ---- units table ---- */
+let unitSort = { k: "net", dir: -1 };
+function renderUnits(a, b) {
+  const saved = S.unit; const rows = [];
+  for (const u of D.meta.units.filter((x) => !saved.startsWith("g:") || ownOf[x.id] === saved.slice(2))) {
+    S.unit = u.id; const x = agg(a, b); S.unit = saved;
+    const mix = CH_ORDER.filter((c) => x.byCh[c] && x.byCh[c].n).map((c) => [c, x.byCh[c].n]);
+    rows.push({ id: u.id, name: u.name, occ: x.occ, adr: x.adr, revpan: x.revpan, net: x.net, n: x.n, gap: x.gapN, orphan: x.orphanN, cx: x.cxRate, mix });
+  }
+  const cols = [["name", "Unit"], ["occ", "Occupancy"], ["adr", "Nightly rate"], ["revpan", "Rev / avail. night"], ["net", "Net revenue"], ["mix", "Channel mix (nights)"], ["gap", "Gap nights"], ["cx", "Cancelled"]];
+  rows.sort((p, q) => { const k = unitSort.k; if (k === "name") return unitSort.dir * p.name.localeCompare(q.name); if (k === "mix") return 0; return unitSort.dir * ((p[k] ?? -1) - (q[k] ?? -1)); });
+  const t = $("#units");
+  t.innerHTML = `<thead><tr>${cols.map(([k, h]) => `<th tabindex="0" data-k="${k}" ${unitSort.k === k ? `aria-sort="${unitSort.dir > 0 ? "ascending" : "descending"}"` : ""}>${h}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map((r) => { const tot = r.mix.reduce((s, m) => s + m[1], 0) || 1;
+      return `<tr class="clickable${S.unit === r.id ? " sel" : ""}" tabindex="0" data-u="${esc(r.id)}"><td>${esc(r.name)}${ownOf[r.id] ? ` <span class="tag">${ownOf[r.id] === "owned" ? "Owned" : "Managed"}</span>` : ""}</td><td>${fmtPct(r.occ)}</td><td>${fmtRM(r.adr, 0)}</td><td>${fmtRM(r.revpan, 0)}</td><td>${fmtRM(r.net, 0)}</td>` +
+        `<td><span class="mix" aria-label="${esc(r.mix.map(([c, n]) => CH[c].name + " " + Math.round(n / tot * 100) + "%").join(", "))}">${r.mix.map(([c, n]) => `<i style="flex:${n};background:var(${CH[c].v})" title="${CH[c].name} ${Math.round(n / tot * 100)}%"></i>`).join("")}</span></td>` +
+        `<td>${fmtN(r.gap)}${r.orphan ? ` <span class="muted">(${r.orphan} short)</span>` : ""}</td><td>${fmtPct(r.cx, 0)}</td></tr>`; }).join("") + `</tbody>`;
+  t.querySelectorAll("th").forEach((th) => { const go = () => { const k = th.dataset.k; if (k === "mix") return; unitSort = { k, dir: unitSort.k === k ? -unitSort.dir : (k === "name" ? 1 : -1) }; render(); };
+    th.addEventListener("click", go); th.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
+  t.querySelectorAll("tbody tr").forEach((tr) => { const go = () => { S.unit = S.unit === tr.dataset.u ? "all" : tr.dataset.u; render(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    tr.addEventListener("click", go); tr.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); }); });
+}
+
+/* ---- single-series line ---- */
+function lineChart(el, months, vals, fmtAxis, fmtVal, label, maxHint) {
+  const F = frame(el);
+  const finite = vals.filter((v) => v != null);
+  const max = maxHint || niceMax(Math.max(1, ...finite) * 1.05);
+  const band = (F.w - F.l - F.r) / months.length;
+  const x = (i) => F.l + band * (i + 0.5); const y = (v) => F.t + (F.h - F.t - F.b) * (1 - v / max);
+  let s = yAxis(F, max, fmtAxis);
+  let d = "", area = "", started = false, firstX = 0, lastX = 0;
+  vals.forEach((v, i) => { if (v == null) { started = false; return; } d += (started ? "L" : "M") + x(i) + "," + y(v); if (!started) firstX = x(i); started = true; lastX = x(i); });
+  const color = css("--ch-agoda");
+  const allFinite = vals.every((v) => v != null);
+  if (allFinite && vals.length > 1) area = `<path d="${d}L${lastX},${y(0)}L${firstX},${y(0)}Z" fill="${color}" opacity="0.10"/>`;
+  s += area + `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const li = vals.map((v, i) => (v == null ? -1 : i)).filter((i) => i >= 0).pop();
+  if (li != null) s += `<circle cx="${x(li)}" cy="${y(vals[li])}" r="4" fill="${color}" stroke="${css("--surface")}" stroke-width="2"/><text class="lbl-ink" x="${Math.min(x(li), F.w - F.r - 2)}" y="${y(vals[li]) - 9}" text-anchor="end">${esc(fmtVal(vals[li]))}</text>`;
+  s += `<line class="xh" x1="0" x2="0" y1="${F.t}" y2="${F.h - F.b}" stroke="${css("--axis")}" stroke-width="1" visibility="hidden"/>`;
+  months.forEach((m, i) => (s += `<rect class="hit" data-i="${i}" x="${F.l + band * i}" y="${F.t}" width="${band}" height="${F.h - F.t - F.b}"/>`));
+  s += xLabels(F, months, x);
+  el.innerHTML = `<svg viewBox="0 0 ${F.w} ${F.h}" role="img" aria-label="${esc(label)}">${s}</svg>`;
+  const xh = el.querySelector(".xh");
+  el.querySelectorAll(".hit").forEach((h) => { const i = +h.dataset.i;
+    h.addEventListener("pointerenter", () => { xh.setAttribute("x1", x(i)); xh.setAttribute("x2", x(i)); xh.setAttribute("visibility", "visible"); });
+    h.addEventListener("pointerleave", () => xh.setAttribute("visibility", "hidden"));
+    attachTip(h, () => ({ title: mLabel(months[i]), rows: [[color, label, fmtVal(vals[i])]] })); });
+}
+function renderOcc(a, b, cur) {
+  const months = mRange(a, b); const vals = months.map((m) => { const r = cur.byM[m]; return r && r.avail ? r.n / r.avail : null; });
+  if (S.tables.occ) { $("#occ").innerHTML = tableHtml(["Month", "Booked nights", "Open nights", "Occupancy"], months.map((m) => { const r = cur.byM[m] || {}; return [mLabel(m), fmtN(r.n), fmtN(r.avail), fmtPct(r.avail ? r.n / r.avail : null)]; })); return; }
+  lineChart($("#occ"), months, vals, (v) => Math.round(v * 100) + "%", (v) => fmtPct(v, 0), "Occupancy", 1);
+}
+function renderAdr(a, b, cur) {
+  const months = mRange(a, b); const vals = months.map((m) => { const r = cur.byM[m]; return r && r.nk ? r.rm / r.nk : null; });
+  if (S.tables.adr) { $("#adr").innerHTML = tableHtml(["Month", "Priced nights", "Room revenue", "Nightly rate"], months.map((m) => { const r = cur.byM[m] || {}; return [mLabel(m), fmtN(r.nk), fmtRM(r.rm, 0), fmtRM(r.nk ? r.rm / r.nk : null, 0)]; })); return; }
+  lineChart($("#adr"), months, vals, (v) => "RM" + Math.round(v), (v) => fmtRM(v, 0), "Nightly rate");
+}
+
+/* ---- seasonality heatmap ---- */
+function renderSeasonality() {
+  const years = [...new Set(D.supply.map((r) => r[1].slice(0, 4)))].filter((y) => y <= D.lastFull.slice(0, 4)).sort();
+  const cell = {};
+  for (const [u, m, cal, mt, ps, uk] of D.supply) { if (!unitOk(u) || m > D.lastFull) continue; (cell[m] = cell[m] || { n: 0, av: 0 }).av += cal - mt - ps - uk; }
+  for (const [u, m, c, n] of D.stays) { if (!unitOk(u) || !chOk(c) || !cell[m]) continue; cell[m].n += n; }
+  const occ = (m) => (cell[m] && cell[m].av >= 20 ? cell[m].n / cell[m].av : null);
+  const steps = ["--seq-1", "--seq-2", "--seq-3", "--seq-4", "--seq-5", "--seq-6"];
+  const stepOf = (v) => steps[Math.min(steps.length - 1, Math.floor(v * steps.length))];
+  // average month profile over recent full years (2022 on, outside the pandemic)
+  const avgYears = years.filter((y) => y >= "2022" && y < D.lastFull.slice(0, 4) + 1);
+  const prof = MON.map((_, i) => { let n = 0, av = 0; for (const y of avgYears) { const m = y + "-" + String(i + 1).padStart(2, "0"); if (cell[m] && m <= D.lastFull) { n += cell[m].n; av += cell[m].av; } } return av ? n / av : null; });
+  if (S.tables.seas) { $("#seas").innerHTML = tableHtml(["Year", ...MON], years.map((y) => [y, ...MON.map((_, i) => fmtPct(occ(y + "-" + String(i + 1).padStart(2, "0")), 0))]).concat([["Average 2022+", ...prof.map((v) => fmtPct(v, 0))]])); return; }
+  const dark = (v) => v >= 0.5;
+  let h = `<div class="heat" style="grid-template-columns:44px repeat(12,minmax(0,1fr))"><div></div>${MON.map((m) => `<div class="h">${m[0]}<span class="wide">${m.slice(1)}</span></div>`).join("")}`;
+  for (const y of years) {
+    h += `<div class="y">${y}</div>`;
+    for (let i = 0; i < 12; i++) { const m = y + "-" + String(i + 1).padStart(2, "0"); const v = occ(m);
+      h += v == null ? `<div class="c"></div>` : `<div class="c" tabindex="0" data-m="${m}" style="background:var(${stepOf(v)});color:${dark(v) ? "#fff" : "var(--ink)"}">${Math.round(v * 100)}</div>`; }
+  }
+  h += `<div class="y" style="font-weight:600">Avg</div>` + prof.map((v) => v == null ? `<div class="c"></div>` : `<div class="c" style="background:var(${stepOf(v)});color:${dark(v) ? "#fff" : "var(--ink)"};font-weight:600">${Math.round(v * 100)}</div>`).join("") + `</div>`;
+  h += `<div class="scale">0%${steps.map((s) => `<i style="background:var(${s})"></i>`).join("")}100% <span style="margin-left:auto">Avg = 2022 onward · 2020–21 were pandemic years</span></div>`;
+  $("#seas").innerHTML = h;
+  $("#seas").querySelectorAll(".c[data-m]").forEach((c) => attachTip(c, () => { const m = c.dataset.m; return { title: mLabel(m), rows: [[null, "Occupancy", fmtPct(occ(m))], [null, "Booked / open nights", `${fmtN(cell[m].n)} / ${fmtN(cell[m].av)}`]] }; }));
+  const wide = innerWidth > 520; $("#seas").querySelectorAll(".wide").forEach((e) => (e.hidden = !wide));
+}
+
+/* ---- lead time ---- */
+function renderLead(cur) {
+  const B = [["Same day", 0, 0], ["1–3 days", 1, 3], ["4–7 days", 4, 7], ["8–14 days", 8, 14], ["15–30 days", 15, 30], ["31–60 days", 31, 60], ["Over 60", 61, 1e9]];
+  const chs = CH_ORDER.filter((c) => c !== "direct" && cur.leads[c] && cur.leads[c].length >= 10);
+  legend("lead-legend", chs);
+  const share = chs.map((c) => { const L = cur.leads[c]; return B.map(([, lo, hi]) => L.filter((v) => v >= lo && v <= hi).length / L.length); });
+  if (S.tables.lead) { $("#lead").innerHTML = tableHtml(["Booked", ...chs.map((c) => CH[c].name)], B.map((bk, i) => [bk[0], ...chs.map((c, j) => fmtPct(share[j][i], 0))]).concat([["Median", ...chs.map((c) => Math.round(median(cur.leads[c])) + " days")]])); return; }
+  if (!chs.length) { $("#lead").innerHTML = `<div class="empty">Not enough bookings in this period.</div>`; return; }
+  const el = $("#lead"); const w = Math.max(280, el.clientWidth); const lab = 78, rw = 40;
+  const rowH = 10 * chs.length + 2 * (chs.length - 1) + 12; const H = B.length * rowH + 4;
+  const max = Math.max(...share.flat(), 0.01); const sx = (v) => (w - lab - rw) * v / max;
+  let s = "";
+  B.forEach(([name], i) => { const y0 = i * rowH;
+    s += `<text x="0" y="${y0 + (rowH - 12) / 2 + 4}" class="lbl-ink">${esc(name)}</text>`;
+    chs.forEach((c, j) => { const v = share[j][i]; const y = y0 + j * 12; const bw = Math.max(v > 0 ? 2 : 0, sx(v)); const r = Math.min(4, bw / 2);
+      s += `<path class="mk" fill="${css(CH[c].v)}" d="M${lab},${y}H${lab + bw - r}Q${lab + bw},${y} ${lab + bw},${y + r}V${y + 10 - r}Q${lab + bw},${y + 10} ${lab + bw - r},${y + 10}H${lab}Z"/>` +
+        `<text x="${lab + bw + 4}" y="${y + 8.5}">${Math.round(v * 100)}%</text>` +
+        `<rect class="hit" data-i="${i}" data-j="${j}" x="${lab}" y="${y - 1}" width="${w - lab}" height="12"/>`; });
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${H}" role="img" aria-label="Lead time distribution by channel">${s}</svg>` +
+    `<p class="sub" style="margin:8px 0 0;font-size:12.5px">Median: ${chs.map((c) => `${CH[c].name} ${Math.round(median(cur.leads[c]))} days`).join(" · ")}</p>`;
+  el.querySelectorAll(".hit").forEach((h) => attachTip(h, () => { const i = +h.dataset.i; return { title: B[i][0] + " ahead", rows: chs.map((c, j) => [css(CH[c].v), CH[c].name, fmtPct(share[j][i], 0)]) }; }));
+}
+
+/* ---- multi-line by quarter or month ---- */
+function multiLine(el, xs, series, fmtAxis, fmtVal, label, xlab) {
+  const F = frame(el); const all = series.flatMap((s) => s.vals).filter((v) => v != null);
+  const max = niceMax(Math.max(0.01, ...all) * 1.08);
+  const band = (F.w - F.l - F.r) / xs.length;
+  const x = (i) => F.l + band * (i + 0.5); const y = (v) => F.t + (F.h - F.t - F.b) * (1 - v / max);
+  let s = yAxis(F, max, fmtAxis);
+  for (const sr of series) {
+    let d = "", on = false; sr.vals.forEach((v, i) => { if (v == null) { on = false; return; } d += (on ? "L" : "M") + x(i) + "," + y(v); on = true; });
+    const col = css(CH[sr.c].v);
+    s += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const li = sr.vals.map((v, i) => (v == null ? -1 : i)).filter((i) => i >= 0).pop();
+    if (li != null) s += `<circle cx="${x(li)}" cy="${y(sr.vals[li])}" r="4" fill="${col}" stroke="${css("--surface")}" stroke-width="2"/>`;
+  }
+  s += `<line class="xh" x1="0" x2="0" y1="${F.t}" y2="${F.h - F.b}" stroke="${css("--axis")}" stroke-width="1" visibility="hidden"/>`;
+  xs.forEach((q, i) => (s += `<rect class="hit" data-i="${i}" x="${F.l + band * i}" y="${F.t}" width="${band}" height="${F.h - F.t - F.b}"/>`));
+  const every = Math.ceil(xs.length / Math.max(3, Math.floor((F.w - F.l) / 54)));
+  s += xs.map((q, i) => (i % every === 0 ? `<text x="${x(i)}" y="${F.h - 8}" text-anchor="middle">${esc(xlab(q))}</text>` : "")).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${F.w} ${F.h}" role="img" aria-label="${esc(label)}">${s}</svg>`;
+  const xh = el.querySelector(".xh");
+  el.querySelectorAll(".hit").forEach((h) => { const i = +h.dataset.i;
+    h.addEventListener("pointerenter", () => { xh.setAttribute("x1", x(i)); xh.setAttribute("x2", x(i)); xh.setAttribute("visibility", "visible"); });
+    h.addEventListener("pointerleave", () => xh.setAttribute("visibility", "hidden"));
+    attachTip(h, () => ({ title: xlab(xs[i]), rows: series.map((sr) => [css(CH[sr.c].v), CH[sr.c].name, fmtVal(sr.vals[i])]) })); });
+}
+
+function renderFees() {
+  const chs = ["agoda", "airbnb"].filter((c) => S.ch.has(c));
+  const qs = [...new Set(D.fees.filter((f) => chs.includes(f[0])).map((f) => f[1]))].sort().filter((q) => q <= D.lastFull.slice(0, 4) + "Q" + Math.ceil(+D.lastFull.slice(5) / 3));
+  const look = {}; for (const [c, q, pct] of D.fees) look[c + q] = pct / 100;
+  const series = chs.map((c) => ({ c, vals: qs.map((q) => look[c + q] ?? null) }));
+  legend("fees-legend", chs, "line");
+  if (S.tables.fees) { $("#fees").innerHTML = tableHtml(["Quarter", ...chs.map((c) => CH[c].name)], qs.map((q, i) => [q.replace("Q", " Q"), ...series.map((s) => fmtPct(s.vals[i]))])); return; }
+  if (!chs.length) { $("#fees").innerHTML = `<div class="empty">Select Agoda or Airbnb to see fees.</div>`; return; }
+  multiLine($("#fees"), qs, series, (v) => Math.round(v * 100) + "%", (v) => fmtPct(v), "Platform fee share by quarter", (q) => q.slice(2, 4) + " " + q.slice(4));
+  // one line on how each channel's fee moved: same quarter two years earlier vs the latest quarter
+  const notes = series.map((sr) => { const li = sr.vals.map((v, i) => (v == null ? -1 : i)).filter((i) => i >= 0).pop(); if (li == null) return "";
+    const back = Math.max(0, li - 8); const v0 = sr.vals.slice(back, li).find((v) => v != null); if (v0 == null) return "";
+    return `${CH[sr.c].name} ${fmtPct(v0)} in ${qs[back].replace("Q", " Q")} → ${fmtPct(sr.vals[li])} in ${qs[li].replace("Q", " Q")}`; }).filter(Boolean);
+  if (notes.length) $("#fees").insertAdjacentHTML("beforeend", `<p class="sub" style="margin:8px 0 0;font-size:12.5px">${notes.map(esc).join(" · ")}</p>`);
+}
+
+function renderCancels(a, b) {
+  const months = mRange(a, b);
+  const chs = CH_ORDER.filter((c) => c !== "direct" && S.ch.has(c));
+  const cnt = {}; for (const [u, c, m, isC] of D.events) { if (!unitOk(u) || !chs.includes(c) || m < a || m > b) continue; const k = c + m; cnt[k] = cnt[k] || [0, 0]; cnt[k][0]++; if (isC) cnt[k][1]++; }
+  const use = chs.filter((c) => months.some((m) => cnt[c + m]));
+  const series = use.map((c) => ({ c, vals: months.map((m) => (cnt[c + m] && cnt[c + m][0] >= 3 ? cnt[c + m][1] / cnt[c + m][0] : null)) }));
+  legend("canc-legend", use, "line");
+  if (S.tables.canc) { $("#canc").innerHTML = tableHtml(["Month", ...use.flatMap((c) => [CH[c].name + " cancelled", "of"])], months.map((m) => [mLabel(m), ...use.flatMap((c) => { const v = cnt[c + m] || [0, 0]; return [fmtN(v[1]), fmtN(v[0])]; })])); return; }
+  if (!use.length) { $("#canc").innerHTML = `<div class="empty">No bookings in this period.</div>`; return; }
+  multiLine($("#canc"), months, series, (v) => Math.round(v * 100) + "%", (v) => fmtPct(v, 0), "Cancellation rate by month", mLabel);
+}
+})();
+</script>
